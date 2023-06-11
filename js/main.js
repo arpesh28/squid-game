@@ -25,7 +25,8 @@ const start_position = 0.6;
 const end_position = -start_position;
 const text = document.querySelector(".text");
 const TIME_LIMIT = 10;
-constGAME;
+let gameStat = "loading";
+let isLookingBack = true;
 
 //  Utility Function to create CUBE
 const createCube = (size, positionX, rotY, color = 0xfbc851) => {
@@ -60,10 +61,12 @@ class Doll {
   lookBack() {
     // this.doll.rotation.y = -3.15;
     gsap.to(this.doll.rotation, { y: -3.15, duration: 0.5 });
+    setTimeout(() => (isLookingBack = true), 200);
   }
   lookFront() {
     // this.doll.rotation.y = 0;
     gsap.to(this.doll.rotation, { y: 0, duration: 0.5 });
+    setTimeout(() => (isLookingBack = false), 500);
   }
   async start() {
     this.lookBack();
@@ -80,6 +83,7 @@ class Player {
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
     sphere.position.x = start_position;
+    sphere.position.z = 0.3;
     scene.add(sphere);
     this.player = sphere;
     this.playerInfo = {
@@ -94,7 +98,18 @@ class Player {
     // this.playerInfo.velocity = 0;
     gsap.to(this.playerInfo, { velocity: 0, duration: 0.1 });
   }
+  check() {
+    if (this.playerInfo.velocity > 0 && !isLookingBack) {
+      text.innerText = "You lose!";
+      gameStat = "over";
+    }
+    if (this.playerInfo.positionX < end_position) {
+      text.innerText = "You win!";
+      gameStat = "over";
+    }
+  }
   update() {
+    this.check();
     this.playerInfo.positionX -= this.playerInfo.velocity;
     this.player.position.x = this.playerInfo.positionX;
   }
@@ -132,11 +147,19 @@ function startGame() {
   let progressBar = createCube({ w: 0.5, h: 0.03, d: 0.2 }, 0, 0);
   progressBar.position.y = 0.65;
   gsap.to(progressBar.scale, { x: 0, duration: TIME_LIMIT });
+  gameStat = "started";
   doll.start();
+  setTimeout(() => {
+    if (gameStat !== "over") {
+      text.innerText = "Timeout!";
+      gameStat = "over";
+    }
+  }, TIME_LIMIT * 1000);
 }
 init();
 
 function animate() {
+  if (gameStat === "over") return;
   renderer.render(scene, camera);
   //  Rotate animation
   // cube.rotation.x += 0.01;
@@ -157,6 +180,7 @@ function onWindowResize() {
 }
 
 window.addEventListener("keydown", (e) => {
+  if (gameStat !== "started") return;
   if (e.key === "ArrowLeft") {
     player.run();
   }
